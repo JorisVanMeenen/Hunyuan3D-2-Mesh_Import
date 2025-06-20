@@ -30,6 +30,8 @@ import uuid
 from hy3dgen.shapegen.utils import logger
 
 MAX_SEED = int(1e7)
+SHAPE_IMPORT = bool(0)
+IMPORT_FOLDER = str()
 
 
 def get_example_img_list():
@@ -170,7 +172,7 @@ def _gen_shape(
     stats = {
         'model': {
             'shapegen': f'{args.model_path}/{args.subfolder}',
-            'texgen': f'{args.texgen_model_path}',
+            'texgen': f'{args.texgen_model_path}/{args.texgen_subfolder}',
         },
         'params': {
             'caption': caption,
@@ -235,7 +237,7 @@ def _gen_shape(
     stats['number_of_vertices'] = mesh.vertices.shape[0]
 
     stats['time'] = time_meta
-    main_image = image if not MV_MODE else image['front']
+    main_image = image if not MV_MODE else list(image.values())
     return mesh, main_image, save_folder, stats, seed
 
 
@@ -255,22 +257,83 @@ def generation_all(
     randomize_seed: bool = False,
 ):
     start_time_0 = time.time()
-    mesh, image, save_folder, stats, seed = _gen_shape(
-        caption,
-        image,
-        mv_image_front=mv_image_front,
-        mv_image_back=mv_image_back,
-        mv_image_left=mv_image_left,
-        mv_image_right=mv_image_right,
-        steps=steps,
-        guidance_scale=guidance_scale,
-        seed=seed,
-        octree_resolution=octree_resolution,
-        check_box_rembg=check_box_rembg,
-        num_chunks=num_chunks,
-        randomize_seed=randomize_seed,
-    )
-    path = export_mesh(mesh, save_folder, textured=False)
+    if SHAPE_IMPORT == True:
+        save_folder = IMPORT_FOLDER
+        path = os.path.join(save_folder, "white_mesh.glb")
+        mesh = trimesh.load(path)
+        if not MV_MODE and image is None and caption is None:
+            raise gr.Error("Please provide either a caption or an image.")
+        if MV_MODE:
+            if mv_image_front is None and mv_image_back is None and mv_image_left is None and mv_image_right is None:
+                raise gr.Error("Please provide at least one view image.")
+            image = {}
+            if mv_image_front:
+                image['front'] = mv_image_front
+            if mv_image_back:
+                image['back'] = mv_image_back
+            if mv_image_left:
+                image['left'] = mv_image_left
+            if mv_image_right:
+                image['right'] = mv_image_right
+        if caption: print('prompt is', caption)
+        
+        stats = {
+            'model': {
+                'texgen': f'{args.texgen_model_path}/{args.texgen_subfolder}',
+            },
+            'params': {
+                'caption': caption,
+                'check_box_rembg': check_box_rembg,
+            }
+        }
+        time_meta = {}
+        
+        if image is None:
+            start_time = time.time()
+            try:
+                image = t2i_worker(caption)
+            except Exception as e:
+                raise gr.Error(f"Text to 3D is disable. Please enable it by `python gradio_app.py --enable_t23d`.")
+            time_meta['text2image'] = time.time() - start_time
+
+        # remove disk io to make responding faster, uncomment at your will.
+        # image.save(os.path.join(save_folder, 'input.png'))
+        if MV_MODE:
+            start_time = time.time()
+            for k, v in image.items():
+                if check_box_rembg or v.mode == "RGB":
+                    img = rmbg_worker(v.convert('RGB'))
+                    image[k] = img
+            time_meta['remove background'] = time.time() - start_time
+            image = list(image.values()) ## Worker cannot handle dict, only list
+        else:
+            if check_box_rembg or image.mode == "RGB":
+                start_time = time.time()
+                image = rmbg_worker(image.convert('RGB'))
+                time_meta['remove background'] = time.time() - start_time
+
+        # remove disk io to make responding faster, uncomment at your will.
+        # image.save(os.path.join(save_folder, 'rembg.png'))
+        
+        stats['time'] = time_meta
+
+    elif SHAPE_IMPORT == False:
+        mesh, image, save_folder, stats, seed = _gen_shape(
+            caption,
+            image,
+            mv_image_front=mv_image_front,
+            mv_image_back=mv_image_back,
+            mv_image_left=mv_image_left,
+            mv_image_right=mv_image_right,
+            steps=steps,
+            guidance_scale=guidance_scale,
+            seed=seed,
+            octree_resolution=octree_resolution,
+            check_box_rembg=check_box_rembg,
+            num_chunks=num_chunks,
+            randomize_seed=randomize_seed,
+        )
+        path = export_mesh(mesh, save_folder, textured=False)
 
     # tmp_time = time.time()
     # mesh = floater_remove_worker(mesh)
@@ -340,6 +403,10 @@ def shape_generation(
 
     path = export_mesh(mesh, save_folder, textured=False)
     model_viewer_html = build_model_viewer_html(save_folder, height=HTML_HEIGHT, width=HTML_WIDTH)
+    
+    global SHAPE_IMPORT
+    SHAPE_IMPORT=bool(0)
+    
     if args.low_vram_mode:
         torch.cuda.empty_cache()
     return (
@@ -347,6 +414,31 @@ def shape_generation(
         model_viewer_html,
         stats,
         seed,
+    )
+    
+def shape_import(file_input):
+    mesh = trimesh.load(file_input.name) ## Load mesh from path
+    global IMPORT_FOLDER
+    IMPORT_FOLDER = gen_save_folder() ## gradio_cache\80ce7ba8-f315-4a1f-a88f-9852c429ed3e
+
+    path = export_mesh(             ## gradio_cache\80ce7ba8-f315-4a1f-a88f-9852c429ed3e\white_mesh.glb
+	    mesh, 
+	    IMPORT_FOLDER, 
+	    textured=False
+	)
+    
+    model_viewer_html = build_model_viewer_html(
+	    IMPORT_FOLDER, 
+	    height=HTML_HEIGHT, 
+	    width=HTML_WIDTH
+	)
+    
+    global SHAPE_IMPORT
+    SHAPE_IMPORT=bool(1)
+    
+    return (
+        gr.update(value=path),
+        model_viewer_html,
     )
 
 
@@ -417,6 +509,8 @@ def build_app():
 
                 with gr.Row():
                     btn = gr.Button(value='Gen Shape', variant='primary', min_width=100)
+                    btn_import = gr.UploadButton(label = 'Import Shape', variant='primary', min_width=100)
+                with gr.Row():
                     btn_all = gr.Button(value='Gen Textured Shape',
                                         variant='primary',
                                         visible=HAS_TEXTUREGEN,
@@ -575,6 +669,33 @@ def build_app():
             lambda: gr.update(selected='gen_mesh_panel'),
             outputs=[tabs_output],
         )
+        
+        btn_import.upload(
+            shape_import, 
+            inputs=[
+                btn_import
+            ],
+            outputs=[
+	            file_out, 
+	            html_gen_mesh, 
+            ]
+        ).then(
+            lambda: (
+	            gr.update(visible=False, value=False),
+	            gr.update(interactive=True), 
+	            gr.update(interactive=True),
+	            gr.update(interactive=False)
+            ),
+            outputs=[
+	            export_texture, 
+	            reduce_face, 
+	            confirm_export,
+	            file_export
+	        ],
+        ).then(
+            lambda: gr.update(selected='gen_mesh_panel'),
+            outputs=[tabs_output],
+        )
 
         def on_gen_mode_change(value):
             if value == 'Turbo':
@@ -648,6 +769,7 @@ if __name__ == '__main__':
     parser.add_argument("--model_path", type=str, default='tencent/Hunyuan3D-2mini')
     parser.add_argument("--subfolder", type=str, default='hunyuan3d-dit-v2-mini-turbo')
     parser.add_argument("--texgen_model_path", type=str, default='tencent/Hunyuan3D-2')
+    parser.add_argument("--texgen_subfolder", type=str, default='hunyuan3d-paint-v2-0')
     parser.add_argument('--port', type=int, default=8080)
     parser.add_argument('--host', type=str, default='0.0.0.0')
     parser.add_argument('--device', type=str, default='cuda')
@@ -694,7 +816,10 @@ if __name__ == '__main__':
         try:
             from hy3dgen.texgen import Hunyuan3DPaintPipeline
 
-            texgen_worker = Hunyuan3DPaintPipeline.from_pretrained(args.texgen_model_path)
+            texgen_worker = Hunyuan3DPaintPipeline.from_pretrained(
+                args.texgen_model_path,
+                subfolder=args.texgen_subfolder
+            )
             if args.low_vram_mode:
                 texgen_worker.enable_model_cpu_offload()
             # Not help much, ignore for now.
