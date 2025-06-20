@@ -1,3 +1,11 @@
+To Do
+- [x] Fix torch.cat issue to allow non-turbo texgen on weak hardware
+- [ ] Publish Mesh import button
+- [ ] Add UI argument selector for gradio
+- [ ] Add mmgp implementation (maybe)
+
+Original README below
+
 [中文阅读](README_zh_cn.md)
 [日本語で読む](README_ja_jp.md)
 
