@@ -38,3 +38,6 @@ rembg
 onnxruntime
 #gevent
 #geventhttpclient
+
+pydantic==2.10.5
+sentencepiece
