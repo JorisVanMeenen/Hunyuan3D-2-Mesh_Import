@@ -22,6 +22,8 @@ To Do
 - [ ] Make multiview better
 - [ ] Add mmgp implementation (maybe)
 
+<img src="https://github.com/user-attachments/assets/f38add46-a18e-474a-a845-333fed8689a0">
+
 Original README below
 
 [中文阅读](README_zh_cn.md)
