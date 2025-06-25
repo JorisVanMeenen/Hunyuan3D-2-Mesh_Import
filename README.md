@@ -1,6 +1,7 @@
 Requires the following to build custom_rasterizer and mesh_processor:
 - The NVIDIA CUDA Toolkit from https://developer.nvidia.com/cuda-downloads
 - Microsoft Visual C++ 14.0 or greater. Get it with "Microsoft C++ Build Tools" from https://visualstudio.microsoft.com/visual-cpp-build-tools/
+
 The install process is based on that of Igor Aherne, so you can download the wheels and install.py from https://github.com/IgorAherne/Hunyuan3D-2-stable-projectorz if you don't want to install the above requirements.
 
 To Do
@@ -8,8 +9,9 @@ To Do
 - [x] Gradio texgen subfolder argument
 - [x] Multiview texgen with gradio
 - [x] Publish Mesh import button
-- [ ] Expose Imported mesh toggle
-- [ ] Add UI argument selector for gradio --> Release
+- [x] Expose Imported mesh toggle
+- [x] Add UI argument selector for gradio --> Release
+- [ ] Make multiview better
 - [ ] Add mmgp implementation (maybe)
 
 Original README below
