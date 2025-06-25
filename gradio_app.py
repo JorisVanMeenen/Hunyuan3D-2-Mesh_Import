@@ -31,7 +31,6 @@ from hy3dgen.shapegen.utils import logger
 from gooey import Gooey
 
 MAX_SEED = int(1e7)
-SHAPE_IMPORT = bool(0)
 IMPORT_FOLDER = str()
 
 
@@ -256,9 +255,10 @@ def generation_all(
     check_box_rembg=False,
     num_chunks=200000,
     randomize_seed: bool = False,
+    check_box_import: bool = False,
 ):
     start_time_0 = time.time()
-    if SHAPE_IMPORT == True:
+    if check_box_import == True:
         save_folder = IMPORT_FOLDER
         path = os.path.join(save_folder, "white_mesh.glb")
         mesh = trimesh.load(path)
@@ -318,7 +318,7 @@ def generation_all(
         
         stats['time'] = time_meta
 
-    elif SHAPE_IMPORT == False:
+    elif check_box_import == False:
         mesh, image, save_folder, stats, seed = _gen_shape(
             caption,
             image,
@@ -405,9 +405,6 @@ def shape_generation(
     path = export_mesh(mesh, save_folder, textured=False)
     model_viewer_html = build_model_viewer_html(save_folder, height=HTML_HEIGHT, width=HTML_WIDTH)
     
-    global SHAPE_IMPORT
-    SHAPE_IMPORT=bool(0)
-    
     if args.low_vram_mode:
         torch.cuda.empty_cache()
     return (
@@ -433,9 +430,6 @@ def shape_import(file_input):
 	    height=HTML_HEIGHT, 
 	    width=HTML_WIDTH
 	)
-    
-    global SHAPE_IMPORT
-    SHAPE_IMPORT=bool(1)
     
     return (
         gr.update(value=path),
@@ -510,7 +504,7 @@ def build_app():
 
                 with gr.Row():
                     btn = gr.Button(value='Gen Shape', variant='primary', min_width=100)
-                    btn_import = gr.UploadButton(label = 'Import Shape', variant='primary', min_width=100)
+                    btn_import = gr.UploadButton(label='Import Shape', variant='primary', min_width=100)
                 with gr.Row():
                     btn_all = gr.Button(value='Gen Textured Shape',
                                         variant='primary',
@@ -533,6 +527,7 @@ def build_app():
                     with gr.Tab('Advanced Options', id='tab_advanced_options'):
                         with gr.Row():
                             check_box_rembg = gr.Checkbox(value=True, label='Remove Background', min_width=100)
+                            check_box_import = gr.Checkbox(value=False, label='Use imported shape', min_width=100)
                             randomize_seed = gr.Checkbox(label="Randomize seed", value=True, min_width=100)
                         seed = gr.Slider(
                             label="Seed",
@@ -660,6 +655,7 @@ def build_app():
                 check_box_rembg,
                 num_chunks,
                 randomize_seed,
+                check_box_import,
             ],
             outputs=[file_out, file_out2, html_gen_mesh, stats, seed]
         ).then(
@@ -685,13 +681,15 @@ def build_app():
 	            gr.update(visible=False, value=False),
 	            gr.update(interactive=True), 
 	            gr.update(interactive=True),
-	            gr.update(interactive=False)
+	            gr.update(interactive=False),
+                gr.update(value=True)
             ),
             outputs=[
 	            export_texture, 
 	            reduce_face, 
 	            confirm_export,
-	            file_export
+	            file_export,
+                check_box_import
 	        ],
         ).then(
             lambda: gr.update(selected='gen_mesh_panel'),
