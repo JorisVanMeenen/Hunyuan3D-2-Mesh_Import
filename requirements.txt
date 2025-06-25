@@ -41,3 +41,4 @@ onnxruntime
 
 pydantic==2.10.5
 sentencepiece
+gooey

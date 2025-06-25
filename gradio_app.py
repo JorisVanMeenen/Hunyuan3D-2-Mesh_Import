@@ -28,6 +28,7 @@ from fastapi.staticfiles import StaticFiles
 import uuid
 
 from hy3dgen.shapegen.utils import logger
+from gooey import Gooey
 
 MAX_SEED = int(1e7)
 SHAPE_IMPORT = bool(0)
@@ -761,26 +762,115 @@ def build_app():
 
     return demo
 
+@Gooey(use_cmd_args=True)
+def parse_args():
 
-if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_path", type=str, default='tencent/Hunyuan3D-2mini')
-    parser.add_argument("--subfolder", type=str, default='hunyuan3d-dit-v2-mini-turbo')
-    parser.add_argument("--texgen_model_path", type=str, default='tencent/Hunyuan3D-2')
-    parser.add_argument("--texgen_subfolder", type=str, default='hunyuan3d-paint-v2-0')
-    parser.add_argument('--port', type=int, default=8080)
-    parser.add_argument('--host', type=str, default='0.0.0.0')
-    parser.add_argument('--device', type=str, default='cuda')
-    parser.add_argument('--mc_algo', type=str, default='mc')
-    parser.add_argument('--cache-path', type=str, default='gradio_cache')
-    parser.add_argument('--enable_t23d', action='store_true')
-    parser.add_argument('--disable_tex', action='store_true')
-    parser.add_argument('--enable_flashvdm', action='store_true')
-    parser.add_argument('--compile', action='store_true')
-    parser.add_argument('--low_vram_mode', action='store_true')
+    parser.add_argument(
+        "--model_path", 
+        type=str, 
+        default='tencent/Hunyuan3D-2mini',
+        choices=[
+            'tencent/Hunyuan3D-2', 
+            'tencent/Hunyuan3D-2mini', 
+            'tencent/Hunyuan3D-2mv'
+        ]
+    )
+    parser.add_argument(
+        "--subfolder", 
+        type=str, 
+        default='hunyuan3d-dit-v2-mini-turbo',
+        choices=[
+            'hunyuan3d-dit-v2-0', 
+            'hunyuan3d-dit-v2-0-fast', 
+            'hunyuan3d-dit-v2-0-turbo', 
+            'hunyuan3d-dit-v2-mini', 
+            'hunyuan3d-dit-v2-mini-fast', 
+            'hunyuan3d-dit-v2-mini-turbo', 
+            'hunyuan3d-dit-v2-mv', 
+            'hunyuan3d-dit-v2-mv-fast', 
+            'hunyuan3d-dit-v2-mv-turbo'
+        ]
+    )
+    parser.add_argument(
+        "--texgen_model_path", 
+        type=str, 
+        default='tencent/Hunyuan3D-2',
+        choices=[
+            'tencent/Hunyuan3D-2', 
+        ]
+    )
+    parser.add_argument(
+        "--texgen_subfolder", 
+        type=str, 
+        default='hunyuan3d-paint-v2-0',
+        choices=[
+            'hunyuan3d-paint-v2-0', 
+            'hunyuan3d-paint-v2-0-turbo'
+        ]
+    )
+    parser.add_argument(
+        '--port', 
+        type=int, 
+        default=8080
+    )
+    parser.add_argument(
+        '--host', 
+        type=str, 
+        default='0.0.0.0'
+    )
+    parser.add_argument(
+        '--device', 
+        type=str, 
+        default='cuda',
+        choices=[
+            'cpu', 
+            'cuda', 
+            'mps'
+        ]
+    )
+    parser.add_argument(
+        '--mc_algo', 
+        type=str, 
+        default='mc',
+        choices=[
+            'mc', 
+            'dmc', 
+        ]
+    )
+    parser.add_argument(
+        '--cache-path', 
+        type=str, 
+        default='gradio_cache'
+    )
+    parser.add_argument(
+        '--enable_t23d', 
+        action='store_true'
+    )
+    parser.add_argument(
+        '--disable_tex', 
+        action='store_true'
+    )
+    parser.add_argument(
+        '--enable_flashvdm', 
+        action='store_true'
+    )
+    parser.add_argument(
+        '--compile', 
+        action='store_true'
+    )
+    parser.add_argument(
+        '--low_vram_mode', 
+        action='store_true'
+    )
     args = parser.parse_args()
+    
+    return args
+    
+if __name__ == '__main__':
+    args = parse_args()
 
     SAVE_DIR = args.cache_path
     os.makedirs(SAVE_DIR, exist_ok=True)
