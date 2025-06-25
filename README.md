@@ -4,6 +4,14 @@ Requires the following to build custom_rasterizer and mesh_processor:
 
 The install process is based on that of Igor Aherne, so you can download the wheels and install.py from https://github.com/IgorAherne/Hunyuan3D-2-stable-projectorz if you don't want to install the above requirements.
 
+Release includes the following to make it portable:
+- Git for Windows/x64 Portable from https://git-scm.com/downloads/win
+- Python 3.11.9 Windows embeddable package (64-bit) https://www.python.org/downloads/windows/
+- get-pip.py from https://bootstrap.pypa.io/get-pip.py
+- sitecustomize.py, python311._pth, pip.ini, environment.bat and gradio-internal.bat from https://github.com/IgorAherne/Hunyuan3D-2-stable-projectorz/releases/tag/latest
+- python_3.11.9_include_libs from https://github.com/woct0rdho/triton-windows/releases/v3.0.0-windows.post1/
+
+
 To Do
 - [x] Fix torch.cat issue to allow non-turbo texgen on weak hardware
 - [x] Gradio texgen subfolder argument
